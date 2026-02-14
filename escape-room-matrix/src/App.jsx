@@ -5,23 +5,30 @@ import {
   GAME_VERSION,
 } from "./gameSettings";
 
-// ↑ zmień tę wartość żeby zresetować czas (np. "1.1")
-
 export default function App() {
   const [password, setPassword] = useState("");
   const [unlocked, setUnlocked] = useState(false);
   const [error, setError] = useState("");
   const [timeLeft, setTimeLeft] = useState(0);
 
-
   // ---- TIMER LOGIC ----
   useEffect(() => {
     const storedVersion = localStorage.getItem("escape_version");
 
-    // Jeśli zmieniono wersję gry → reset timera
+    // Reset przy zmianie wersji
     if (storedVersion !== GAME_VERSION) {
       localStorage.removeItem("escape_end_time");
+      localStorage.removeItem("escape_finish_time");
       localStorage.setItem("escape_version", GAME_VERSION);
+    }
+
+    const finishTime = localStorage.getItem("escape_finish_time");
+
+    // Jeśli gra już ukończona → użyj zapisanego czasu
+    if (finishTime) {
+      setUnlocked(true);
+      setTimeLeft(Number(finishTime));
+      return;
     }
 
     let endTime = localStorage.getItem("escape_end_time");
@@ -33,15 +40,20 @@ export default function App() {
     }
 
     const interval = setInterval(() => {
-      const remaining = endTime - Date.now();
+  if (localStorage.getItem("escape_finish_time")) {
+    clearInterval(interval);
+    return;
+  }
 
-      if (remaining <= 0) {
-        setTimeLeft(0);
-        clearInterval(interval);
-      } else {
-        setTimeLeft(remaining);
-      }
-    }, 1000);
+  const remaining = endTime - Date.now();
+
+  if (remaining <= 0) {
+    setTimeLeft(0);
+    clearInterval(interval);
+  } else {
+    setTimeLeft(remaining);
+  }
+}, 1000);
 
     return () => clearInterval(interval);
   }, []);
@@ -59,7 +71,10 @@ export default function App() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (password === "NEON42") {
+    if (password === "123456") {
+      // ZAPISZ ZAMROŻONY CZAS
+      localStorage.setItem("escape_finish_time", timeLeft);
+      
       setUnlocked(true);
     } else {
       setError("ODMOWA DOSTĘPU");
@@ -70,8 +85,8 @@ export default function App() {
   if (timeLeft === 0 && !unlocked) {
     return (
       <div className="success-screen">
-        <h1>💀 SYSTEM LOCKED</h1>
-        <p>TIME EXPIRED</p>
+        <h1>💀 SYSTEM ZABLOKOWANY</h1>
+        <p>KONIEC CZASU</p>
       </div>
     );
   }
@@ -80,8 +95,8 @@ export default function App() {
     return (
       <div className="success-screen">
         <h1>🔓 GRATULACJE WIRUS ODINSTALOWANY</h1>
-        
         <p>Ferie rodzinne w Ustroniu uratowane!</p>
+
         <div style={{ fontSize: "32px", margin: "20px 0" }}>
           ⏳ Pozostały czas: {formatTime(timeLeft)}
         </div>
@@ -100,13 +115,13 @@ export default function App() {
           ⏳ {formatTime(timeLeft)}
         </div>
 
-        <p>WPISZ HASŁO ABY ODNINSTALOWAĆ WIRUSA</p>
+        <p>WPISZ HASŁO ABY USUNĄĆ WIRUSA</p>
 
         <form onSubmit={handleSubmit}>
           <input
-            type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            maxLength={6}
             autoFocus
           />
           <button type="submit">USUŃ WIRUSA</button>
