@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import MatrixRain from "./MatrixRain";
+import {
+  GAME_DURATION_MINUTES,
+  GAME_VERSION,
+} from "./gameSettings";
 
-const GAME_DURATION_MINUTES = 20;
-const GAME_VERSION = "1.0"; 
 // ↑ zmień tę wartość żeby zresetować czas (np. "1.1")
 
 export default function App() {
@@ -11,7 +13,6 @@ export default function App() {
   const [error, setError] = useState("");
   const [timeLeft, setTimeLeft] = useState(0);
 
-  const CORRECT_PASSWORD = "NEON42";
 
   // ---- TIMER LOGIC ----
   useEffect(() => {
@@ -58,7 +59,7 @@ export default function App() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (password === CORRECT_PASSWORD) {
+    if (password === "NEON42") {
       setUnlocked(true);
     } else {
       setError("ODMOWA DOSTĘPU");
@@ -78,8 +79,12 @@ export default function App() {
   if (unlocked) {
     return (
       <div className="success-screen">
-        <h1>🔓 SYSTEM UNLOCKED</h1>
-        <p>Kolejna wskazówka została aktywowana...</p>
+        <h1>🔓 GRATULACJE WIRUS ODINSTALOWANY</h1>
+        
+        <p>Ferie rodzinne w Ustroniu uratowane!</p>
+        <div style={{ fontSize: "32px", margin: "20px 0" }}>
+          ⏳ Pozostały czas: {formatTime(timeLeft)}
+        </div>
       </div>
     );
   }
