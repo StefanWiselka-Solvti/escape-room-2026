@@ -1,30 +1,50 @@
 import { useState, useEffect } from "react";
 import MatrixRain from "./MatrixRain";
-import {
-  GAME_DURATION_MINUTES,
-  GAME_VERSION,
-} from "./gameSettings";
+import { GAME_DURATION_MINUTES } from "./gameSettings";
 
 export default function App() {
   const [password, setPassword] = useState("");
   const [unlocked, setUnlocked] = useState(false);
   const [error, setError] = useState("");
   const [timeLeft, setTimeLeft] = useState(0);
+  const [gameVersion, setGameVersion] = useState("A");
+
+  // ---- GENERATOR LOSOWEJ WERSJI ----
+  const generateRandomVersion = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    return chars[Math.floor(Math.random() * chars.length)];
+  };
+
+  // ---- NASŁUCH KOMBINACJI (Ctrl + Shift + V) ----
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key.toUpperCase() === "V") {
+        const newVersion = generateRandomVersion();
+        setGameVersion(newVersion);
+        console.log("Nowa wersja gry:", newVersion);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // ---- TIMER LOGIC ----
   useEffect(() => {
     const storedVersion = localStorage.getItem("escape_version");
 
-    // Reset przy zmianie wersji
-    if (storedVersion !== GAME_VERSION) {
+    if (storedVersion !== gameVersion) {
       localStorage.removeItem("escape_end_time");
       localStorage.removeItem("escape_finish_time");
-      localStorage.setItem("escape_version", GAME_VERSION);
+      localStorage.setItem("escape_version", gameVersion);
+
+      setUnlocked(false);
+      setPassword("");
+      setError("");
     }
 
     const finishTime = localStorage.getItem("escape_finish_time");
 
-    // Jeśli gra już ukończona → użyj zapisanego czasu
     if (finishTime) {
       setUnlocked(true);
       setTimeLeft(Number(finishTime));
@@ -34,29 +54,28 @@ export default function App() {
     let endTime = localStorage.getItem("escape_end_time");
 
     if (!endTime) {
-      endTime =
-        Date.now() + GAME_DURATION_MINUTES * 60 * 1000;
+      endTime = Date.now() + GAME_DURATION_MINUTES * 60 * 1000;
       localStorage.setItem("escape_end_time", endTime);
     }
 
     const interval = setInterval(() => {
-  if (localStorage.getItem("escape_finish_time")) {
-    clearInterval(interval);
-    return;
-  }
+      if (localStorage.getItem("escape_finish_time")) {
+        clearInterval(interval);
+        return;
+      }
 
-  const remaining = endTime - Date.now();
+      const remaining = endTime - Date.now();
 
-  if (remaining <= 0) {
-    setTimeLeft(0);
-    clearInterval(interval);
-  } else {
-    setTimeLeft(remaining);
-  }
-}, 1000);
+      if (remaining <= 0) {
+        setTimeLeft(0);
+        clearInterval(interval);
+      } else {
+        setTimeLeft(remaining);
+      }
+    }, 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [gameVersion]);
 
   const formatTime = (ms) => {
     const totalSeconds = Math.floor(ms / 1000);
@@ -68,17 +87,25 @@ export default function App() {
     ).padStart(2, "0")}`;
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    if (password === "123456") {
-      // ZAPISZ ZAMROŻONY CZAS
+  // ---- WALIDACJA HASŁA ----
+  const validatePassword = (value) => {
+    if (value === "4382") {
       localStorage.setItem("escape_finish_time", timeLeft);
-      
       setUnlocked(true);
     } else {
       setError("ODMOWA DOSTĘPU");
       setPassword("");
+    }
+  };
+
+  // ---- AUTO WALIDACJA PO 6 ZNAKACH ----
+  const handleChange = (e) => {
+    const value = e.target.value;
+    setPassword(value);
+    setError("");
+
+    if (value.length === 4) {
+      validatePassword(value);
     }
   };
 
@@ -95,9 +122,9 @@ export default function App() {
     return (
       <div className="success-screen">
         <h1>🔓 GRATULACJE WIRUS ODINSTALOWANY</h1>
-        <p>Ferie rodzinne w Ustroniu uratowane!</p>
+        <p style={{ fontSize: "32px", margin: "20px 0" }}>Ferie rodzinne w Ustroniu uratowane!</p>
 
-        <div style={{ fontSize: "32px", margin: "20px 0" }}>
+        <div style={{ fontSize: "64px", margin: "20px 0" }}>
           ⏳ Pozostały czas: {formatTime(timeLeft)}
         </div>
       </div>
@@ -117,15 +144,12 @@ export default function App() {
 
         <p>WPISZ HASŁO ABY USUNĄĆ WIRUSA</p>
 
-        <form onSubmit={handleSubmit}>
-          <input
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            maxLength={6}
-            autoFocus
-          />
-          <button type="submit">USUŃ WIRUSA</button>
-        </form>
+        <input
+          value={password}
+          onChange={handleChange}
+          maxLength={6}
+          autoFocus
+        />
 
         {error && <div className="error">{error}</div>}
       </div>
